@@ -1,0 +1,1 @@
+docker.io/library/wordpress@sha256:a85a30d9e7524d4577d6fdd09935b698687521026efbefd4b05d85ed6ae5dec7

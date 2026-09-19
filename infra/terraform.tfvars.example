@@ -1,0 +1,20 @@
+# Copy to terraform.tfvars. Authenticate with AWS SSO/profile, never keys here.
+account_id = "123456789012" # replace
+region = "us-east-1"
+project = "caleb-wp-lab"
+allowed_ipv4_cidr = "192.0.2.10/32" # replace with your workstation's public IPv4
+# Preferred: an existing validated ACM certificate and a domain you control.
+certificate_arn = ""
+domain_name = ""
+# For a short disposable lab only. HTTP is unencrypted even with /32 restriction.
+# Set true only if you accept dummy credentials and dummy content over HTTP.
+allow_http_lab = false
+enable_scaling = false
+# Optional account-wide monthly alert; not a hard spending limit.
+budget_email = ""
+monthly_budget_usd = 5
+
+profile = "lab"
+application_ready = false
+bootstrap_complete = false
+allow_destroy = false

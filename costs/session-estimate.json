@@ -1,0 +1,11 @@
+{
+  "status": "requires region-specific pricing inputs before apply",
+  "region": "us-east-1",
+  "profile": "lab",
+  "planned_hours": 4,
+  "verified_hourly_subtotal_usd": null,
+  "other_charges_usd": null,
+  "pricing_checked_at": null,
+  "calculator_estimate_url": null,
+  "actual_billed_cost_usd": null
+}
