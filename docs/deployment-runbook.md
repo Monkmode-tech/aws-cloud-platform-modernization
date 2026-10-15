@@ -1,26 +1,82 @@
 # Deployment runbook
 
-Run from the repository root in Linux, macOS, or Windows WSL. Use a dedicated sandbox AWS account. The commands below are instructions for you to execute; no AWS deployment was performed when this package was created.
+Use Bash in AWS CloudShell, Linux, macOS, or Windows WSL, and a dedicated sandbox AWS account. Run the setup sections in order. If a command fails, resolve that error before continuing to the next section. The commands below are instructions for you to execute; no AWS deployment was performed when this package was created.
 
 ## 1. Prerequisites and cost decision
 
-Install Terraform 1.11.4 or a compatible 1.11+ release, Python 3.11+, AWS CLI v2, and Git. Use AWS IAM Identity Center/SSO or your normal temporary-credential profile. Never paste keys into this repository or chat.
+Use Terraform 1.11.4 or a compatible 1.11+ release, Python 3.11+, AWS CLI v2, and Git. CloudShell provides AWS CLI and console-session credentials, but check the installed Python and Terraform versions against these requirements. Never paste access keys into this repository or chat.
+
+### 1.1 Authenticate: choose the path for your environment
+
+**AWS CloudShell opened from the AWS console**
+
+CloudShell receives credentials from your current console sign-in. An IAM user does not need an SSO profile named `portfolio` to use that session. Clear example profile overrides, then verify the identity:
+
+```bash
+unset AWS_PROFILE AWS_DEFAULT_PROFILE
+aws sts get-caller-identity
+```
+
+The command should return JSON containing `Account`, `Arn`, and `UserId` for the intended sandbox account. If it fails, resolve that failure before continuing. Do not run `aws sso login --profile portfolio` or `export AWS_PROFILE=portfolio` for this CloudShell path.
+
+AWS documents console-session credential forwarding in the [CloudShell CLI guide](https://docs.aws.amazon.com/cloudshell/latest/userguide/working-with-aws-cli.html).
+
+**Local Linux/macOS/Windows WSL with IAM Identity Center (SSO)**
+
+Use this path only when IAM Identity Center is configured and you have its sign-in details. The name `portfolio` is an example credential-profile name, not a profile created automatically by making an IAM user. If the profile does not exist, configure it once:
+
+```bash
+aws configure sso --profile portfolio
+```
+
+Then authenticate:
 
 ```bash
 aws sso login --profile portfolio
 export AWS_PROFILE=portfolio
 aws sts get-caller-identity
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements-dev.txt
-cp infra/terraform.tfvars.example infra/terraform.tfvars
 ```
 
-If you use a different authentication method, use its standard credential chain. The example profile name is not preconfigured. The deployment operator needs permissions to create the resources in `infra/` and IAM roles, pass those roles to ECS, initialize secrets, and run the bootstrap task. The narrow CD role is intentionally insufficient for provisioning. Do not use root credentials. First-time ECS/EFS/RDS/Application Auto Scaling use may require service-linked roles; check IAM errors against the actual denied action.
+For another authentication method, use its normal temporary-credential/profile chain. The deployment operator needs permissions to create the resources in `infra/` and IAM roles, pass those roles to ECS, initialize secrets, and run the bootstrap task. The narrow CD role is intentionally insufficient for provisioning. Do not use root credentials. First-time ECS/EFS/RDS/Application Auto Scaling use may require service-linked roles; check IAM errors against the actual denied action.
 
-Edit `infra/terraform.tfvars`: set your account ID, region, a unique project name, and your workstation public IPv4 `/32`. Do not put a private LAN address there. `192.0.2.10` is a documentation placeholder.
+### 1.2 Obtain the project and enter its directory
 
-Choose **lab first**. Review `costs/README.md`, set an account budget notification if desired, and reserve time to destroy resources. Budget notifications are delayed alerts, not hard caps.
+For a new setup, clone the repository. If the project folder already exists, the following block enters it without deleting it:
+
+```bash
+cd ~
+if [ ! -d aws-cloud-platform-modernization ]; then
+  git clone https://github.com/Monkmode-tech/aws-cloud-platform-modernization.git
+fi
+cd aws-cloud-platform-modernization
+ls requirements-dev.txt infra/terraform.tfvars.example
+```
+
+Both paths must appear in the `ls` output. Your shell should now be in `aws-cloud-platform-modernization`, not just `~`. Run the remaining commands from this repository root.
+
+Preserve existing checkouts, Terraform state, and private backups. Deleting local files does not remove deployed AWS resources. If a deleted checkout previously managed resources, recover its state or identify its remote backend before a new apply; a fresh Git clone does not restore ignored local state or backups. See [Terraform state](https://developer.hashicorp.com/terraform/language/state).
+
+### 1.3 Create the project virtual environment and local configuration
+
+If you activated a virtual environment in your home directory, deactivate it before creating the project environment:
+
+```bash
+if type deactivate >/dev/null 2>&1; then
+  deactivate
+fi
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+if [ ! -f infra/terraform.tfvars ]; then
+  cp infra/terraform.tfvars.example infra/terraform.tfvars
+fi
+```
+
+The copy step preserves an existing `terraform.tfvars`. A pip notice about a newer pip version is informational; a missing requirements file means you have not entered a complete project checkout.
+
+Edit `infra/terraform.tfvars`: set your account ID, region, a unique project name, and your workstation public IPv4 `/32`. Do not put a private LAN address there. `192.0.2.10` is a documentation placeholder. When using CloudShell, use your browser workstation's public IP for this allowlist, not CloudShell's outbound IP.
+
+Choose **lab first** with `profile="lab"`. This Terraform setting chooses the infrastructure configuration; it is separate from the `AWS_PROFILE` environment variable that selects CLI credentials. Review `costs/README.md`, set an account budget notification if desired, and reserve time to destroy resources. Budget notifications are delayed alerts, not hard caps.
 
 For HTTPS, provide an existing validated ACM certificate ARN in the same region and its matching `domain_name`. After apply, create a DNS CNAME/alias to `alb_dns_name`. ACM/DNS provisioning and domain registration are not included. If you have no domain, `allow_http_lab=true` permits a short `/32`-restricted test with disposable credentials and synthetic content only. Restricting the source IP does not encrypt HTTP. The business profile refuses this mode.
 
