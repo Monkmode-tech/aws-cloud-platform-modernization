@@ -1,4 +1,4 @@
-# Copy to terraform.tfvars. Authenticate with AWS SSO/profile, never keys here.
+# Copy to terraform.tfvars. Use CloudShell session credentials or a configured local profile; never keys here.
 account_id = "123456789012" # replace
 region = "us-east-1"
 project = "caleb-wp-lab"
